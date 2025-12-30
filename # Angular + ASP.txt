@@ -1,0 +1,129 @@
+# Angular + ASP.NET Core E-Commerce Application
+
+## 1. Project Overview
+
+This document defines the **recommended folder and project structure** for the E-Commerce application based on the provided SRS. The architecture follows **Clean Architecture**, **RBAC**, and **scalable modular design** using **Angular 18** and **ASP.NET Core (.NET 8)**.
+
+---
+
+## 2. Root Directory Structure
+
+```
+ECommerceApp/
+├── frontend/        # Angular 18 SPA
+├── backend/         # ASP.NET Core Web API (.NET 8)
+├── docs/            # SRS, API docs, diagrams
+└── README.md
+```
+
+---
+
+## 3. Frontend Structure (Angular 18)
+
+```
+frontend/
+├── src/
+│   ├── app/
+│   │   ├── core/                    # Singleton services & app-level logic
+│   │   │   ├── guards/               # Auth, Admin, Seller, Customer guards
+│   │   │   ├── interceptors/         # JWT & global error handling
+│   │   │   ├── services/             # Auth, API, Storage, Payment
+│   │   │   ├── models/               # Interfaces & DTOs
+│   │   │   └── core.module.ts
+│   │   │
+│   │   ├── shared/                  # Reusable UI elements
+│   │   │   ├── components/           # Header, Footer, Loader, Modal
+│   │   │   ├── directives/
+│   │   │   ├── pipes/
+│   │   │   └── shared.module.ts
+│   │   │
+│   │   ├── features/                # Role & feature-based modules
+│   │   │   ├── auth/                 # Login, Register, Forgot Password
+│   │   │   ├── admin/                # Admin dashboard & management
+│   │   │   ├── seller/               # Seller dashboard & operations
+│   │   │   ├── customer/             # Customer shopping & profile
+│   │   │   ├── cart/                 # Cart & checkout
+│   │   │   ├── orders/               # Orders & invoices
+│   │   │   └── payments/             # Payment history
+│   │   │
+│   │   ├── app.routes.ts             # Central routing config
+│   │   ├── app.component.ts
+│   │   └── app.config.ts
+│   │
+│   ├── environments/
+│   │   ├── environment.ts
+│   │   └── environment.prod.ts
+│   │
+│   ├── assets/
+│   └── main.ts
+│
+├── angular.json
+├── package.json
+└── tsconfig.json
+```
+
+---
+
+## 4. Backend Structure (ASP.NET Core .NET 8)
+
+```
+backend/
+├── ECommerce.API/                   # API Layer
+│   ├── Controllers/
+│   ├── Middleware/
+│   ├── Filters/
+│   ├── Program.cs
+│   └── appsettings.json
+│
+├── ECommerce.Core/                  # Business Layer
+│   ├── Entities/
+│   ├── DTOs/
+│   ├── Interfaces/
+│   ├── Services/
+│   ├── Enums/
+│   ├── Exceptions/
+│   └── Helpers/
+│
+├── ECommerce.Infrastructure/        # Data & External Services
+│   ├── Data/
+│   ├── Repositories/
+│   ├── UnitOfWork/
+│   ├── Services/
+│   └── Migrations/
+│
+├── ECommerce.Tests/                 # Unit & Integration Tests
+└── ECommerce.sln
+```
+
+---
+
+## 5. Role-Based Feature Mapping
+
+| Role     | Frontend Module | Backend Controllers   |
+| -------- | --------------- | --------------------- |
+| Admin    | admin           | AdminController       |
+| Seller   | seller          | SellerController      |
+| Customer | customer        | Orders, Cart, Profile |
+
+---
+
+## 6. Key Architectural Principles
+
+* Feature-based Angular modules
+* Clean Architecture on backend
+* JWT-based authentication
+* Role-based access control (RBAC)
+* Separation of concerns
+
+---
+
+## 7. Future Enhancements Support
+
+* Wishlist module
+* Ratings & Reviews
+* Multi-language UI
+* AI Recommendations
+
+---
+
+**This structure strictly aligns with the provided SRS and is scalable, maintainable, and production-ready.**
