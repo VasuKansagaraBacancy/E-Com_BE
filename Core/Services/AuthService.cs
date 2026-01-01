@@ -108,11 +108,22 @@ namespace E_Commerce.Core.Services
 
         public async Task<bool> ForgotPasswordAsync(ForgotPasswordDto forgotPasswordDto)
         {
-            var user = await _userRepository.GetByEmailAsync(forgotPasswordDto.Email.ToLowerInvariant());
+            var email = forgotPasswordDto.Email.ToLowerInvariant();
+            var user = await _userRepository.GetByEmailAsync(email);
 
+            // Security: Don't reveal if email exists - always return success
+            // But only generate and send OTP if user actually exists
             if (user == null)
             {
-                // Don't reveal if email exists for security
+                // User doesn't exist - return success without generating OTP
+                // This prevents email enumeration attacks
+                return true;
+            }
+
+            // Additional safety check - ensure user is valid before proceeding
+            if (user.Id <= 0)
+            {
+                // Invalid user - return success without generating OTP
                 return true;
             }
 
@@ -121,6 +132,7 @@ namespace E_Commerce.Core.Services
                 throw new AuthenticationException("Your account is inactive. Please contact support.");
             }
 
+            // Only proceed with OTP generation if user exists and is valid
             // Invalidate existing OTPs
             await _otpRepository.InvalidateUserOtpsAsync(user.Id);
 
@@ -139,7 +151,7 @@ namespace E_Commerce.Core.Services
 
             await _otpRepository.CreateAsync(otpEntity);
 
-            // Send email with OTP
+            // Send email with OTP - only called if user exists
             await _emailService.SendPasswordResetOtpAsync(user.Email, otp);
 
             return true;
@@ -201,4 +213,5 @@ namespace E_Commerce.Core.Services
         }
     }
 }
+
 
