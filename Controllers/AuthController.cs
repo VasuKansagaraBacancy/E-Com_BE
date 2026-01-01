@@ -119,13 +119,22 @@ namespace E_Commerce.Controllers
                     });
                 }
 
-                await _authService.ForgotPasswordAsync(forgotPasswordDto);
+                var result = await _authService.ForgotPasswordAsync(forgotPasswordDto);
 
-                // Always return success to prevent email enumeration
+                // Return appropriate message based on whether email exists
+                if (!result.EmailExists)
+                {
+                    return Ok(new ApiResponseDto<object>
+                    {
+                        Success = false,
+                        Message = "No account found with this email address."
+                    });
+                }
+
                 return Ok(new ApiResponseDto<object>
                 {
                     Success = true,
-                    Message = "If the email exists, a 6-digit OTP has been sent to your email."
+                    Message = "A 6-digit OTP has been sent to your email."
                 });
             }
             catch (AuthenticationException ex)

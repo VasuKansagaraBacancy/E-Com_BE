@@ -2,6 +2,7 @@ using E_Commerce.Core.DTOs;
 using E_Commerce.Core.Entities;
 using E_Commerce.Core.Exceptions;
 using E_Commerce.Core.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace E_Commerce.Core.Services
 {
@@ -12,19 +13,22 @@ namespace E_Commerce.Core.Services
         private readonly IPasswordHasher _passwordHasher;
         private readonly IJwtTokenService _jwtTokenService;
         private readonly IEmailService _emailService;
+        private readonly ILogger<AuthService> _logger;
 
         public AuthService(
             IUserRepository userRepository,
             IPasswordResetOtpRepository otpRepository,
             IPasswordHasher passwordHasher,
             IJwtTokenService jwtTokenService,
-            IEmailService emailService)
+            IEmailService emailService,
+            ILogger<AuthService> logger)
         {
             _userRepository = userRepository;
             _otpRepository = otpRepository;
             _passwordHasher = passwordHasher;
             _jwtTokenService = jwtTokenService;
             _emailService = emailService;
+            _logger = logger;
         }
 
         public async Task<AuthResponseDto> RegisterAsync(RegisterDto registerDto)
@@ -106,25 +110,34 @@ namespace E_Commerce.Core.Services
             };
         }
 
-        public async Task<bool> ForgotPasswordAsync(ForgotPasswordDto forgotPasswordDto)
+        public async Task<ForgotPasswordResultDto> ForgotPasswordAsync(ForgotPasswordDto forgotPasswordDto)
         {
             var email = forgotPasswordDto.Email.ToLowerInvariant();
             var user = await _userRepository.GetByEmailAsync(email);
 
-            // Security: Don't reveal if email exists - always return success
-            // But only generate and send OTP if user actually exists
+            // CRITICAL: Security check - if user doesn't exist, return immediately
+            // DO NOT generate OTP or send email for non-existent users
             if (user == null)
             {
-                // User doesn't exist - return success without generating OTP
-                // This prevents email enumeration attacks
-                return true;
+                // User doesn't exist - return result indicating email doesn't exist
+                _logger.LogInformation("Password reset requested for non-existent email: {Email}", email);
+                return new ForgotPasswordResultDto
+                {
+                    EmailExists = false,
+                    OtpSent = false
+                };
             }
 
             // Additional safety check - ensure user is valid before proceeding
             if (user.Id <= 0)
             {
-                // Invalid user - return success without generating OTP
-                return true;
+                // Invalid user - return result indicating email doesn't exist
+                _logger.LogWarning("Password reset requested for user with invalid ID: {Email}", email);
+                return new ForgotPasswordResultDto
+                {
+                    EmailExists = false,
+                    OtpSent = false
+                };
             }
 
             if (!user.IsActive)
@@ -133,6 +146,17 @@ namespace E_Commerce.Core.Services
             }
 
             // Only proceed with OTP generation if user exists and is valid
+            // Double-check user is not null before proceeding (defensive programming)
+            if (user == null || string.IsNullOrEmpty(user.Email))
+            {
+                _logger.LogError("CRITICAL: User became null after validation check for email: {Email}", email);
+                return new ForgotPasswordResultDto
+                {
+                    EmailExists = false,
+                    OtpSent = false
+                };
+            }
+
             // Invalidate existing OTPs
             await _otpRepository.InvalidateUserOtpsAsync(user.Id);
 
@@ -151,10 +175,26 @@ namespace E_Commerce.Core.Services
 
             await _otpRepository.CreateAsync(otpEntity);
 
-            // Send email with OTP - only called if user exists
+            // FINAL SAFETY CHECK: Ensure user is still valid before sending email
+            if (user == null || user.Id <= 0 || string.IsNullOrEmpty(user.Email))
+            {
+                _logger.LogError("CRITICAL: User validation failed right before email send for email: {Email}", email);
+                return new ForgotPasswordResultDto
+                {
+                    EmailExists = false,
+                    OtpSent = false
+                };
+            }
+
+            // Send email with OTP - only called if user exists and is valid
+            _logger.LogInformation("Sending password reset OTP to existing user: {Email}", user.Email);
             await _emailService.SendPasswordResetOtpAsync(user.Email, otp);
 
-            return true;
+            return new ForgotPasswordResultDto
+            {
+                EmailExists = true,
+                OtpSent = true
+            };
         }
 
         public async Task<bool> ResetPasswordAsync(ResetPasswordDto resetPasswordDto)

@@ -6,7 +6,7 @@ namespace E_Commerce.Core.Interfaces
     {
         Task<AuthResponseDto> RegisterAsync(RegisterDto registerDto);
         Task<AuthResponseDto> LoginAsync(LoginDto loginDto);
-        Task<bool> ForgotPasswordAsync(ForgotPasswordDto forgotPasswordDto);
+        Task<ForgotPasswordResultDto> ForgotPasswordAsync(ForgotPasswordDto forgotPasswordDto);
         Task<bool> ResetPasswordAsync(ResetPasswordDto resetPasswordDto);
     }
 }
