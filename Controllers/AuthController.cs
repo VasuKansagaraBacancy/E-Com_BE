@@ -61,6 +61,49 @@ namespace E_Commerce.Controllers
             }
         }
 
+        [HttpPost("google-login")]
+        public async Task<ActionResult<ApiResponseDto<AuthResponseDto>>> GoogleLogin([FromBody] GoogleLoginDto googleLoginDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new ApiResponseDto<AuthResponseDto>
+                    {
+                        Success = false,
+                        Message = "Validation failed",
+                        Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
+                    });
+                }
+
+                var result = await _authService.GoogleLoginAsync(googleLoginDto);
+
+                return Ok(new ApiResponseDto<AuthResponseDto>
+                {
+                    Success = true,
+                    Message = "Google login successful",
+                    Data = result
+                });
+            }
+            catch (AuthenticationException ex)
+            {
+                return Unauthorized(new ApiResponseDto<AuthResponseDto>
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during Google login");
+                return StatusCode(500, new ApiResponseDto<AuthResponseDto>
+                {
+                    Success = false,
+                    Message = "An error occurred during Google login"
+                });
+            }
+        }
+
         [HttpPost("login")]
         public async Task<ActionResult<ApiResponseDto<AuthResponseDto>>> Login([FromBody] LoginDto loginDto)
         {

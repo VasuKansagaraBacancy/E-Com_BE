@@ -20,6 +20,12 @@ namespace E_Commerce.Infrastructure.Repositories
                 .FirstOrDefaultAsync(u => u.Email == email);
         }
 
+        public async Task<User?> GetByGoogleIdAsync(string googleId)
+        {
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.GoogleId == googleId);
+        }
+
         public async Task<User> CreateAsync(User user)
         {
             _context.Users.Add(user);

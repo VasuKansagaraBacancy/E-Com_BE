@@ -1,0 +1,162 @@
+GOOGLE AUTHENTICATION TROUBLESHOOTING GUIDE
+============================================
+
+COMMON ERRORS AND SOLUTIONS
+----------------------------
+
+1. ERROR: "The given origin is not allowed for the given client ID" (403)
+   CAUSE: Your frontend origin is not configured in Google Cloud Console
+   
+   SOLUTION:
+   a) Go to Google Cloud Console: https://console.cloud.google.com/
+   b) Navigate to: APIs & Services > Credentials
+   c) Click on your OAuth 2.0 Client ID
+   d) Under "Authorized JavaScript origins", add:
+      - http://localhost:4200
+      - https://localhost:4200 (if using HTTPS)
+      - http://localhost:4200/ (with trailing slash)
+      - Your production domain when deploying
+   e) Click "Save"
+   f) Wait 1-2 minutes for changes to propagate
+   g) Clear browser cache and try again
+
+2. ERROR: "Invalid Google authentication token" (401 from backend)
+   CAUSE: Token validation is failing
+   
+   CHECKLIST:
+   a) Verify Client ID matches:
+      - Backend appsettings.json: "GoogleOAuth:ClientId"
+      - Frontend Google initialization: client_id in google.accounts.id.initialize()
+      - Google Cloud Console: OAuth 2.0 Client ID
+      ALL THREE MUST MATCH EXACTLY
+   
+   b) Verify you're sending the correct token:
+      - Frontend should send: response.credential (from Google callback)
+      - NOT response.access_token or response.id_token (different tokens)
+      - The token should be a long JWT string starting with "eyJ..."
+   
+   c) Check backend logs for detailed error:
+      - Look for "Invalid Google ID token" in backend console
+      - Check the inner exception message
+   
+   d) Verify token is not expired:
+      - Google ID tokens expire after 1 hour
+      - Make sure you're sending a fresh token
+   
+   e) Check if token is being truncated:
+      - Ensure the full token string is sent in the request
+      - Check network tab to see the full payload
+
+3. ERROR: "Google OAuth is not configured" (401 from backend)
+   CAUSE: ClientId missing in appsettings.json
+   
+   SOLUTION:
+   a) Open appsettings.json in backend
+   b) Add or verify:
+      "GoogleOAuth": {
+        "ClientId": "YOUR_CLIENT_ID_HERE"
+      }
+   c) Restart the backend server
+   d) Make sure ClientId matches the one in Google Cloud Console
+
+4. ERROR: CORS errors
+   CAUSE: Backend CORS not configured for frontend origin
+   
+   SOLUTION:
+   a) Check Program.cs in backend
+   b) Verify CORS policy includes your frontend origin:
+      policy.WithOrigins("http://localhost:4200")
+   c) Make sure AllowCredentials() is included if using cookies
+
+5. ERROR: "Email not provided by Google"
+   CAUSE: Google account doesn't have email or email scope not requested
+   
+   SOLUTION:
+   a) Make sure you're requesting email scope in frontend:
+      google.accounts.id.initialize({
+        client_id: 'YOUR_CLIENT_ID',
+        callback: handleGoogleResponse,
+        // Add this if not already present:
+        ux_mode: 'popup',
+        auto_select: false
+      });
+   b) User must grant email permission when signing in
+
+VERIFICATION STEPS
+-------------------
+
+Step 1: Verify Google Cloud Console Setup
+   ✓ OAuth 2.0 Client ID created
+   ✓ Client ID type: Web application
+   ✓ Authorized JavaScript origins includes: http://localhost:4200
+   ✓ Authorized redirect URIs (if using redirect flow)
+
+Step 2: Verify Backend Configuration
+   ✓ appsettings.json has GoogleOAuth:ClientId
+   ✓ ClientId matches Google Cloud Console
+   ✓ Backend server restarted after config change
+
+Step 3: Verify Frontend Configuration
+   ✓ Google script loaded: <script src="https://accounts.google.com/gsi/client">
+   ✓ client_id in initialize() matches backend
+   ✓ Sending response.credential (not other tokens)
+   ✓ API endpoint: POST /api/auth/google-login
+   ✓ Request body: { "idToken": "..." }
+
+Step 4: Test Token Manually
+   You can decode the JWT token at https://jwt.io to verify:
+   - "aud" (audience) should match your Client ID
+   - "iss" (issuer) should be "https://accounts.google.com"
+   - "exp" (expiration) should be in the future
+
+DEBUGGING TIPS
+--------------
+
+1. Enable detailed logging in backend:
+   In appsettings.json, set:
+   "Logging": {
+     "LogLevel": {
+       "Default": "Information",
+       "E_Commerce": "Debug"
+     }
+   }
+
+2. Check browser console:
+   - Look for Google Identity Services errors
+   - Check network tab for request/response
+   - Verify token is being sent correctly
+
+3. Check backend console:
+   - Look for "Validating Google token with ClientId: ..."
+   - Check for any exception details
+   - Verify token validation errors
+
+4. Test with Postman:
+   Get a token from frontend, then test:
+   POST https://localhost:7022/api/auth/google-login
+   Headers: Content-Type: application/json
+   Body: { "idToken": "YOUR_TOKEN_HERE" }
+
+QUICK CHECKLIST
+---------------
+
+Before asking for help, verify:
+[ ] Google Cloud Console: Origin added to Authorized JavaScript origins
+[ ] Backend appsettings.json: ClientId configured and matches Google Console
+[ ] Frontend: client_id matches backend ClientId
+[ ] Frontend: Sending response.credential (not access_token)
+[ ] Backend: Server restarted after config changes
+[ ] Browser: Cache cleared, hard refresh (Ctrl+Shift+R)
+[ ] Token: Fresh token (not expired, not truncated)
+[ ] CORS: Backend allows frontend origin
+
+COMMON MISTAKES
+---------------
+
+1. Using different Client IDs in frontend and backend
+2. Not adding frontend origin to Google Console
+3. Sending wrong token type (access_token instead of credential)
+4. Forgetting to restart backend after config change
+5. Using expired or cached tokens
+6. Missing email scope in Google OAuth request
+

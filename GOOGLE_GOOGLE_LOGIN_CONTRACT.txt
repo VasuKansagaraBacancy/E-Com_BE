@@ -1,0 +1,177 @@
+Google Sign-In Integration Contract (Backend ⇄ Frontend)
+==========================================================
+
+IMPORTANT: If you encounter errors, see GOOGLE_AUTH_TROUBLESHOOTING.txt for detailed solutions.
+
+1. FLOW OVERVIEW
+----------------
+1) Frontend shows a "Sign in with Google" button using Google Identity Services.
+2) Google returns an ID token (idToken / credential) to the frontend.
+3) Frontend sends that idToken to the backend endpoint:
+   POST /api/auth/google-login
+4) Backend:
+   - Validates the ID token with Google.
+   - If user does not exist: creates a new user with role = Customer.
+   - If user exists: logs them in.
+   - Returns a JWT token and user info.
+5) Frontend stores the JWT like normal login and uses it in:
+   Authorization: Bearer <token>
+   for all secured APIs.
+
+2. BACKEND CONFIG (REFERENCE)
+-----------------------------
+In appsettings.json:
+
+  "GoogleOAuth": {
+    "ClientId": "YOUR_GOOGLE_CLIENT_ID_HERE"
+  }
+
+This ClientId must match the one used in the Angular app.
+
+3. NORMAL LOGIN (EMAIL / PASSWORD)
+----------------------------------
+URL:
+  POST /api/auth/login
+
+Request body:
+  {
+    "email": "user@example.com",
+    "password": "PlainTextPassword"
+  }
+
+Success response:
+  {
+    "success": true,
+    "message": "Login successful",
+    "data": {
+      "token": "JWT_TOKEN_HERE",
+      "email": "user@example.com",
+      "firstName": "John",
+      "lastName": "Doe",
+      "role": "Customer",
+      "expiresAt": "2025-01-01T12:34:56Z"
+    }
+  }
+
+Special rule:
+- If the account was created with Google Sign-In and has no password, this endpoint returns 401 with a message like:
+  "This account was created with Google Sign-In. Please use Google Sign-In to login."
+
+4. GOOGLE LOGIN API
+-------------------
+URL:
+  POST /api/auth/google-login
+
+Auth:
+  Public (no JWT required).
+
+Content-Type:
+  application/json
+
+4.1 Request payload:
+  {
+    "idToken": "GOOGLE_ID_TOKEN_FROM_FRONTEND"
+  }
+
+Notes:
+- idToken is the Google ID token provided by Google Identity Services (response.credential on the frontend).
+
+4.2 Success response:
+  {
+    "success": true,
+    "message": "Google login successful",
+    "data": {
+      "token": "JWT_TOKEN_HERE",
+      "email": "user@example.com",
+      "firstName": "John",
+      "lastName": "Doe",
+      "role": "Customer",
+      "expiresAt": "2025-01-01T12:34:56Z"
+    }
+  }
+
+Notes:
+- For NEW Google users, role will always be "Customer".
+- For existing users linked to Google, role will be whatever is stored ("Customer" / "Admin" / "Seller").
+
+4.3 Error responses:
+
+Invalid/expired Google token:
+  {
+    "success": false,
+    "message": "Invalid Google authentication token."
+  }
+
+Inactive account:
+  {
+    "success": false,
+    "message": "Your account is inactive. Please contact support."
+  }
+
+Generic server error:
+  HTTP 500
+  {
+    "success": false,
+    "message": "An error occurred during Google login"
+  }
+
+5. FRONTEND RESPONSIBILITIES
+----------------------------
+
+5.1 Get ID token from Google (Angular, using Google Identity Services):
+
+- Load script in index.html:
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+- In login component:
+
+  declare const google: any;
+
+  ngOnInit(): void {
+    google.accounts.id.initialize({
+      client_id: "YOUR_GOOGLE_CLIENT_ID_HERE",
+      callback: (response: any) => this.handleGoogleResponse(response)
+    });
+
+    google.accounts.id.renderButton(
+      document.getElementById("googleSignInDiv"),
+      { theme: "outline", size: "large" }
+    );
+  }
+
+  handleGoogleResponse(response: any) {
+    const idToken = response.credential;
+
+    // Call backend
+    this.http.post("https://localhost:5001/api/auth/google-login", { idToken })
+      .subscribe(res => {
+        // Save res.data.token and res.data.role
+        // Redirect based on role
+      });
+  }
+
+5.2 Treat Google login like normal login:
+- On success, store:
+  - data.token  (JWT)
+  - data.role   (Customer / Admin / Seller)
+  - data.email, data.firstName, data.lastName (optional)
+- Attach token to all secured backend calls:
+  Authorization: Bearer <token>
+- Use the role to drive routing/guards:
+  - Customer → customer area
+  - Admin    → admin area
+  - Seller   → seller area
+
+6. KEY GUARANTEE FROM BACKEND
+-----------------------------
+- If a user signs in with Google and does not exist in the system:
+  - Backend will create a new user with:
+      Role = "Customer"
+      IsActive = true
+- Frontend does NOT need to send any extra data (name, role, etc.).
+- Frontend only needs to send:
+  {
+    "idToken": "<Google ID Token>"
+  }
+
+

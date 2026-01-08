@@ -11,9 +11,11 @@ namespace E_Commerce.Core.Entities
         [MaxLength(100)]
         public string Email { get; set; } = string.Empty;
 
-        [Required]
         [MaxLength(500)]
-        public string PasswordHash { get; set; } = string.Empty;
+        public string? PasswordHash { get; set; }
+
+        [MaxLength(200)]
+        public string? GoogleId { get; set; }
 
         [Required]
         [MaxLength(100)]

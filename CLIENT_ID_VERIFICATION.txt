@@ -1,0 +1,90 @@
+GOOGLE CLIENT ID VERIFICATION
+===============================
+
+YOUR CLIENT ID:
+---------------
+867848949678-4qjhet7k1vqnpeq88f29crmchds1amri.apps.googleusercontent.com
+
+VERIFICATION CHECKLIST:
+-----------------------
+
+✅ BACKEND CONFIGURATION (appsettings.json):
+   Location: E-Commerce/appsettings.json
+   Section: "GoogleOAuth:ClientId"
+   Value: 867848949678-4qjhet7k1vqnpeq88f29crmchds1amri.apps.googleusercontent.com
+   Status: ✅ CONFIGURED
+
+✅ BACKEND CONFIGURATION (appsettings.Development.json):
+   Location: E-Commerce/appsettings.Development.json
+   Section: "GoogleOAuth:ClientId"
+   Value: 867848949678-4qjhet7k1vqnpeq88f29crmchds1amri.apps.googleusercontent.com
+   Status: ✅ CONFIGURED
+
+⚠️  FRONTEND CONFIGURATION (Angular):
+   Location: Your Angular app (login.component.ts or similar)
+   Code: google.accounts.id.initialize({
+           client_id: "867848949678-4qjhet7k1vqnpeq88f29crmchds1amri.apps.googleusercontent.com",
+           ...
+         })
+   Status: ⚠️  VERIFY IN YOUR FRONTEND CODE
+
+⚠️  GOOGLE CLOUD CONSOLE:
+   Location: https://console.cloud.google.com/
+   Navigate: APIs & Services → Credentials
+   OAuth 2.0 Client ID: 867848949678-4qjhet7k1vqnpeq88f29crmchds1amri.apps.googleusercontent.com
+   Status: ⚠️  VERIFY IN GOOGLE CLOUD CONSOLE
+
+IMPORTANT REMINDERS:
+--------------------
+
+1. ALL THREE PLACES MUST USE THE SAME CLIENT ID:
+   - Backend appsettings.json ✅
+   - Frontend Google initialization ⚠️  (verify)
+   - Google Cloud Console ⚠️  (verify)
+
+2. GOOGLE CLOUD CONSOLE MUST HAVE:
+   - Authorized JavaScript origins: http://localhost:4200
+   - Authorized JavaScript origins: https://localhost:4200 (if using HTTPS)
+   - Save changes and wait 2-3 minutes
+
+3. AFTER MAKING CHANGES:
+   - Restart backend server
+   - Restart Angular dev server
+   - Clear browser cache
+
+HOW TO VERIFY IN FRONTEND:
+--------------------------
+
+Search your Angular codebase for:
+  - "google.accounts.id.initialize"
+  - "client_id"
+  - "867848949678"
+
+Make sure the client_id value matches exactly:
+  867848949678-4qjhet7k1vqnpeq88f29crmchds1amri.apps.googleusercontent.com
+
+HOW TO VERIFY IN GOOGLE CLOUD CONSOLE:
+---------------------------------------
+
+1. Go to: https://console.cloud.google.com/
+2. Select your project
+3. Navigate to: APIs & Services → Credentials
+4. Find OAuth 2.0 Client ID that ends with: ...apps.googleusercontent.com
+5. Click on it to view details
+6. Verify the Client ID matches: 867848949678-4qjhet7k1vqnpeq88f29crmchds1amri
+7. Check "Authorized JavaScript origins" includes: http://localhost:4200
+
+TESTING:
+--------
+
+After verifying all three places match:
+
+1. Start backend server
+2. Start Angular dev server (ng serve)
+3. Open browser: http://localhost:4200
+4. Try Google Sign-In
+5. Check backend console logs for:
+   "Validating Google token with ClientId: 867848949678-..."
+
+If you see the Client ID in the logs, backend is configured correctly!
+
