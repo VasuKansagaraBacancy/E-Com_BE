@@ -12,6 +12,8 @@ namespace E_Commerce.Infrastructure.Data
 
         public DbSet<User> Users { get; set; }
         public DbSet<PasswordResetOtp> PasswordResetOtps { get; set; }
+        public DbSet<Product> Products { get; set; }
+        public DbSet<ProductCategory> ProductCategories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -41,6 +43,42 @@ namespace E_Commerce.Infrastructure.Data
                       .WithMany(u => u.PasswordResetOtps)
                       .HasForeignKey(e => e.UserId)
                       .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ProductCategory configuration
+            modelBuilder.Entity<ProductCategory>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.Name);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(500);
+            });
+
+            // Product configuration
+            modelBuilder.Entity<Product>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.Name);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(2000);
+                entity.Property(e => e.Price).IsRequired().HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ImageUrl).HasMaxLength(500);
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+                
+                entity.HasOne(e => e.Category)
+                      .WithMany(c => c.Products)
+                      .HasForeignKey(e => e.CategoryId)
+                      .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(e => e.CreatedBy)
+                      .WithMany()
+                      .HasForeignKey(e => e.CreatedByUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(e => e.ApprovedBy)
+                      .WithMany()
+                      .HasForeignKey(e => e.ApprovedByUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

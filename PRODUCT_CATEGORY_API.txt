@@ -1,0 +1,666 @@
+PRODUCT & CATEGORY MANAGEMENT API DOCUMENTATION
+================================================
+
+This document describes the Product and Category Management APIs for the E-Commerce application.
+
+BASE URL: https://localhost:7022/api
+
+AUTHENTICATION:
+---------------
+Most endpoints require JWT authentication. Include JWT token in the request header:
+
+  Authorization: Bearer <your-jwt-token>
+
+ROLE-BASED ACCESS:
+------------------
+- Admin: Full access to all operations
+- Seller: Can create/update/delete their own products (requires admin approval)
+- Customer: Can only view approved products
+- Public: Can view approved products and categories
+
+
+================================================================================
+PRODUCT CATEGORY APIs
+================================================================================
+
+1. GET ALL CATEGORIES (PUBLIC)
+==============================
+
+Endpoint:
+  GET /api/productcategory
+
+Authentication:
+  Not required (Public access)
+
+Description:
+  Retrieves all active product categories.
+
+Response (Success - 200 OK):
+  {
+    "success": true,
+    "message": "Categories retrieved successfully",
+    "data": [
+      {
+        "id": 1,
+        "name": "Electronics",
+        "description": "Electronic devices and accessories",
+        "isActive": true,
+        "createdAt": "2025-01-01T10:00:00Z",
+        "updatedAt": null
+      }
+    ]
+  }
+
+
+2. GET CATEGORY BY ID (PUBLIC)
+===============================
+
+Endpoint:
+  GET /api/productcategory/{id}
+
+Authentication:
+  Not required (Public access)
+
+Response (Success - 200 OK):
+  {
+    "success": true,
+    "message": "Category retrieved successfully",
+    "data": {
+      "id": 1,
+      "name": "Electronics",
+      "description": "Electronic devices and accessories",
+      "isActive": true,
+      "createdAt": "2025-01-01T10:00:00Z",
+      "updatedAt": null
+    }
+  }
+
+
+3. CREATE CATEGORY (ADMIN ONLY)
+================================
+
+Endpoint:
+  POST /api/productcategory
+
+Authentication:
+  Required (Admin role)
+
+Request Body:
+  {
+    "name": "Electronics",
+    "description": "Electronic devices and accessories"
+  }
+
+Response (Success - 200 OK):
+  {
+    "success": true,
+    "message": "Category created successfully",
+    "data": {
+      "id": 1,
+      "name": "Electronics",
+      "description": "Electronic devices and accessories",
+      "isActive": true,
+      "createdAt": "2025-01-01T10:00:00Z",
+      "updatedAt": null
+    }
+  }
+
+
+4. UPDATE CATEGORY (ADMIN ONLY)
+================================
+
+Endpoint:
+  PUT /api/productcategory/{id}
+
+Authentication:
+  Required (Admin role)
+
+Request Body:
+  {
+    "name": "Electronics Updated",
+    "description": "Updated description",
+    "isActive": true
+  }
+
+Response (Success - 200 OK):
+  {
+    "success": true,
+    "message": "Category updated successfully",
+    "data": { ... }
+  }
+
+
+5. DELETE CATEGORY (ADMIN ONLY)
+================================
+
+Endpoint:
+  DELETE /api/productcategory/{id}
+
+Authentication:
+  Required (Admin role)
+
+Response (Success - 200 OK):
+  {
+    "success": true,
+    "message": "Category deleted successfully"
+  }
+
+Note: This is a soft delete (sets IsActive to false)
+
+
+================================================================================
+PRODUCT APIs
+================================================================================
+
+IMPORTANT PRODUCT STATUS RULES:
+--------------------------------
+- "Pending": Product created by Seller, waiting for Admin approval
+- "Approved": Product approved by Admin, visible to customers
+- "Rejected": Product rejected by Admin
+
+APPROVAL WORKFLOW:
+------------------
+1. Admin creates product → Status: "Approved" (auto-approved)
+2. Seller creates product → Status: "Pending" (needs approval)
+3. Admin approves/rejects pending products
+4. Only "Approved" products are visible to customers
+5. If Seller updates an approved product → Status changes to "Pending" (needs re-approval)
+
+
+1. GET ALL PRODUCTS
+==================
+
+Endpoint:
+  GET /api/product
+
+Authentication:
+  Not required (Public access, but filtered by role)
+
+Description:
+  - Customers/Public: See only approved products
+  - Admin/Seller: See all products (including pending/rejected)
+
+Response (Success - 200 OK):
+  {
+    "success": true,
+    "message": "Products retrieved successfully",
+    "data": [
+      {
+        "id": 1,
+        "name": "Laptop",
+        "description": "High-performance laptop",
+        "price": 999.99,
+        "stockQuantity": 50,
+        "imageUrl": "https://example.com/laptop.jpg",
+        "categoryId": 1,
+        "categoryName": "Electronics",
+        "createdByUserId": 2,
+        "createdByEmail": "seller@example.com",
+        "status": "Approved",
+        "isActive": true,
+        "createdAt": "2025-01-01T10:00:00Z",
+        "updatedAt": null,
+        "approvedAt": "2025-01-01T11:00:00Z",
+        "approvedByUserId": 1,
+        "approvedByEmail": "admin@example.com"
+      }
+    ]
+  }
+
+
+2. GET APPROVED PRODUCTS (PUBLIC)
+==================================
+
+Endpoint:
+  GET /api/product/approved
+
+Authentication:
+  Not required (Public access)
+
+Description:
+  Retrieves only approved products (visible to customers).
+
+Response: Same format as GET /api/product, but only approved products
+
+
+3. GET PENDING PRODUCTS (ADMIN ONLY)
+=====================================
+
+Endpoint:
+  GET /api/product/pending
+
+Authentication:
+  Required (Admin role)
+
+Description:
+  Retrieves all products waiting for admin approval.
+
+Response: Same format as GET /api/product, but only pending products
+
+
+4. GET PRODUCTS BY SELLER
+==========================
+
+Endpoint:
+  GET /api/product/seller/{sellerId}
+
+Authentication:
+  Required (Admin or Seller role)
+
+Description:
+  - Seller: Can only view their own products (sellerId must match their userId)
+  - Admin: Can view any seller's products
+
+Response: Same format as GET /api/product
+
+
+5. GET PRODUCT BY ID
+====================
+
+Endpoint:
+  GET /api/product/{id}
+
+Authentication:
+  Not required (Public access, but filtered)
+
+Description:
+  - Customers/Public: Can only see approved products
+  - Admin/Seller: Can see all products
+
+Response (Success - 200 OK):
+  {
+    "success": true,
+    "message": "Product retrieved successfully",
+    "data": {
+      "id": 1,
+      "name": "Laptop",
+      "description": "High-performance laptop",
+      "price": 999.99,
+      "stockQuantity": 50,
+      "imageUrl": "https://example.com/laptop.jpg",
+      "categoryId": 1,
+      "categoryName": "Electronics",
+      "createdByUserId": 2,
+      "createdByEmail": "seller@example.com",
+      "status": "Approved",
+      "isActive": true,
+      "createdAt": "2025-01-01T10:00:00Z",
+      "updatedAt": null,
+      "approvedAt": "2025-01-01T11:00:00Z",
+      "approvedByUserId": 1,
+      "approvedByEmail": "admin@example.com"
+    }
+  }
+
+
+6. CREATE PRODUCT (ADMIN OR SELLER)
+====================================
+
+Endpoint:
+  POST /api/product
+
+Authentication:
+  Required (Admin or Seller role)
+
+Request Body:
+  {
+    "name": "Laptop",
+    "description": "High-performance laptop",
+    "price": 999.99,
+    "stockQuantity": 50,
+    "imageUrl": "https://example.com/laptop.jpg",
+    "categoryId": 1
+  }
+
+Response (Success - 200 OK):
+  For Admin:
+    {
+      "success": true,
+      "message": "Product created and approved successfully",
+      "data": { ... }
+    }
+
+  For Seller:
+    {
+      "success": true,
+      "message": "Product created successfully. Waiting for admin approval.",
+      "data": { ... }
+    }
+
+Notes:
+  - Admin products are auto-approved (status: "Approved")
+  - Seller products need approval (status: "Pending")
+  - Category must exist and be active
+
+
+7. UPDATE PRODUCT (ADMIN OR SELLER)
+====================================
+
+Endpoint:
+  PUT /api/product/{id}
+
+Authentication:
+  Required (Admin or Seller role)
+
+Request Body:
+  {
+    "name": "Laptop Updated",
+    "description": "Updated description",
+    "price": 899.99,
+    "stockQuantity": 40,
+    "imageUrl": "https://example.com/laptop-updated.jpg",
+    "categoryId": 1
+  }
+
+Response (Success - 200 OK):
+  For Seller (if product was approved):
+    {
+      "success": true,
+      "message": "Product updated successfully. Waiting for admin approval.",
+      "data": { ... }
+    }
+
+  For Admin or Seller (if product was pending):
+    {
+      "success": true,
+      "message": "Product updated successfully",
+      "data": { ... }
+    }
+
+Notes:
+  - Seller can only update their own products
+  - If Seller updates an approved product, status changes to "Pending" (needs re-approval)
+  - Admin can update any product
+
+
+8. DELETE PRODUCT (ADMIN OR SELLER)
+====================================
+
+Endpoint:
+  DELETE /api/product/{id}
+
+Authentication:
+  Required (Admin or Seller role)
+
+Response (Success - 200 OK):
+  {
+    "success": true,
+    "message": "Product deleted successfully"
+  }
+
+Notes:
+  - Seller can only delete their own products
+  - This is a soft delete (sets IsActive to false)
+
+
+9. APPROVE/REJECT PRODUCT (ADMIN ONLY)
+=======================================
+
+Endpoint:
+  POST /api/product/approve
+
+Authentication:
+  Required (Admin role)
+
+Request Body:
+  {
+    "productId": 1,
+    "approved": true  // true = approve, false = reject
+  }
+
+Response (Success - 200 OK):
+  For Approval:
+    {
+      "success": true,
+      "message": "Product approved successfully"
+    }
+
+  For Rejection:
+    {
+      "success": true,
+      "message": "Product rejected successfully"
+    }
+
+Notes:
+  - Only pending products can be approved/rejected
+  - Approved products become visible to customers
+  - Rejected products remain hidden
+
+
+================================================================================
+FRONTEND IMPLEMENTATION EXAMPLES
+================================================================================
+
+Angular Service Example:
+------------------------
+
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ProductService {
+  private apiUrl = 'https://localhost:7022/api/product';
+  private categoryApiUrl = 'https://localhost:7022/api/productcategory';
+
+  constructor(private http: HttpClient) {}
+
+  private getHeaders(): HttpHeaders {
+    const token = localStorage.getItem('token');
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+  }
+
+  // Categories (Public)
+  getCategories(): Observable<any> {
+    return this.http.get(this.categoryApiUrl);
+  }
+
+  // Products (Public - approved only)
+  getApprovedProducts(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/approved`);
+  }
+
+  // Products (Admin/Seller - all products)
+  getAllProducts(): Observable<any> {
+    return this.http.get(this.apiUrl, { headers: this.getHeaders() });
+  }
+
+  // Pending products (Admin only)
+  getPendingProducts(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/pending`, { headers: this.getHeaders() });
+  }
+
+  // Create product (Admin/Seller)
+  createProduct(product: any): Observable<any> {
+    return this.http.post(this.apiUrl, product, { headers: this.getHeaders() });
+  }
+
+  // Update product (Admin/Seller)
+  updateProduct(id: number, product: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/${id}`, product, { headers: this.getHeaders() });
+  }
+
+  // Delete product (Admin/Seller)
+  deleteProduct(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/${id}`, { headers: this.getHeaders() });
+  }
+
+  // Approve/Reject product (Admin only)
+  approveProduct(productId: number, approved: boolean): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/approve`,
+      { productId, approved },
+      { headers: this.getHeaders() }
+    );
+  }
+}
+
+
+Component Example (Product List with Status):
+----------------------------------------------
+
+import { Component, OnInit } from '@angular/core';
+import { ProductService } from './product.service';
+
+@Component({
+  selector: 'app-product-list',
+  template: `
+    <div *ngFor="let product of products">
+      <h3>{{ product.name }}</h3>
+      <p>{{ product.description }}</p>
+      <p>Price: ${{ product.price }}</p>
+      <p>Stock: {{ product.stockQuantity }}</p>
+      <span [class]="getStatusClass(product.status)">
+        {{ product.status }}
+      </span>
+      
+      <!-- Show approve button for admin on pending products -->
+      <button 
+        *ngIf="isAdmin && product.status === 'Pending'"
+        (click)="approveProduct(product.id, true)"
+        class="btn btn-success">
+        Approve
+      </button>
+      
+      <button 
+        *ngIf="isAdmin && product.status === 'Pending'"
+        (click)="approveProduct(product.id, false)"
+        class="btn btn-danger">
+        Reject
+      </button>
+    </div>
+  `
+})
+export class ProductListComponent implements OnInit {
+  products: any[] = [];
+  isAdmin = false; // Set based on user role
+
+  constructor(private productService: ProductService) {}
+
+  ngOnInit() {
+    // Check user role
+    const userRole = localStorage.getItem('role');
+    this.isAdmin = userRole === 'Admin';
+
+    if (this.isAdmin) {
+      this.loadAllProducts();
+    } else {
+      this.loadApprovedProducts();
+    }
+  }
+
+  loadApprovedProducts() {
+    this.productService.getApprovedProducts().subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.products = response.data;
+        }
+      }
+    });
+  }
+
+  loadAllProducts() {
+    this.productService.getAllProducts().subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.products = response.data;
+        }
+      }
+    });
+  }
+
+  approveProduct(productId: number, approved: boolean) {
+    this.productService.approveProduct(productId, approved).subscribe({
+      next: (response) => {
+        if (response.success) {
+          alert(response.message);
+          this.loadAllProducts(); // Refresh list
+        }
+      }
+    });
+  }
+
+  getStatusClass(status: string): string {
+    switch (status) {
+      case 'Approved': return 'badge badge-success';
+      case 'Pending': return 'badge badge-warning';
+      case 'Rejected': return 'badge badge-danger';
+      default: return 'badge';
+    }
+  }
+}
+
+
+================================================================================
+IMPORTANT NOTES FOR FRONTEND
+================================================================================
+
+1. ROLE-BASED UI:
+   - Show "Pending" products only to Admin and the product's Seller
+   - Show "Approve/Reject" buttons only to Admin
+   - Customers should only see approved products
+
+2. PRODUCT STATUS INDICATORS:
+   - Approved: Green badge, visible to all
+   - Pending: Yellow badge, visible to Admin and Seller
+   - Rejected: Red badge, visible to Admin and Seller
+
+3. SELLER WORKFLOW:
+   - Seller creates product → Status: "Pending"
+   - Show message: "Product created. Waiting for admin approval."
+   - Seller can see their pending products
+   - When approved, product becomes visible to customers
+
+4. ADMIN WORKFLOW:
+   - Admin sees all products including pending
+   - Admin can approve/reject pending products
+   - Admin products are auto-approved
+
+5. UPDATE BEHAVIOR:
+   - If Seller updates an approved product, it goes back to "Pending"
+   - Show warning: "Updating this product will require admin re-approval"
+
+6. ERROR HANDLING:
+   - Handle 401 (Unauthorized) - redirect to login
+   - Handle 403 (Forbidden) - show "Access denied" message
+   - Handle 404 (Not Found) - show appropriate message
+   - Handle validation errors from request body
+
+7. VALIDATION:
+   - Price must be > 0
+   - Stock quantity must be >= 0
+   - Category must exist and be active
+   - Name is required (max 200 chars)
+   - Description is optional (max 2000 chars)
+
+================================================================================
+API SUMMARY
+================================================================================
+
+CATEGORY APIs:
+| Method | Endpoint | Auth | Role | Description |
+|--------|----------|------|------|-------------|
+| GET | /api/productcategory | No | - | Get all categories (public) |
+| GET | /api/productcategory/{id} | No | - | Get category by ID (public) |
+| POST | /api/productcategory | Yes | Admin | Create category |
+| PUT | /api/productcategory/{id} | Yes | Admin | Update category |
+| DELETE | /api/productcategory/{id} | Yes | Admin | Delete category |
+
+PRODUCT APIs:
+| Method | Endpoint | Auth | Role | Description |
+|--------|----------|------|------|-------------|
+| GET | /api/product | No | - | Get products (filtered by role) |
+| GET | /api/product/approved | No | - | Get approved products (public) |
+| GET | /api/product/pending | Yes | Admin | Get pending products |
+| GET | /api/product/seller/{id} | Yes | Admin/Seller | Get seller's products |
+| GET | /api/product/{id} | No | - | Get product by ID (filtered) |
+| POST | /api/product | Yes | Admin/Seller | Create product |
+| PUT | /api/product/{id} | Yes | Admin/Seller | Update product |
+| DELETE | /api/product/{id} | Yes | Admin/Seller | Delete product |
+| POST | /api/product/approve | Yes | Admin | Approve/Reject product |
+

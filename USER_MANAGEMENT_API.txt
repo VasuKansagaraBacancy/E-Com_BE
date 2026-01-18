@@ -1,0 +1,431 @@
+USER MANAGEMENT API DOCUMENTATION
+===================================
+
+This document describes the User Management APIs for the E-Commerce application.
+All endpoints require JWT authentication (Bearer token in Authorization header).
+
+BASE URL: https://localhost:7022/api/user
+
+AUTHENTICATION:
+---------------
+All endpoints require authentication. Include JWT token in the request header:
+
+  Authorization: Bearer <your-jwt-token>
+
+IMPORTANT SECURITY NOTE:
+------------------------
+- Inactive users CANNOT log in (blocked in both email/password and Google login)
+- When a user is deactivated, they will be logged out on their next request
+- Only authenticated users can access these endpoints
+
+
+1. GET ALL USERS
+================
+
+Endpoint:
+  GET /api/user
+
+Authentication:
+  Required (Bearer token)
+
+Description:
+  Retrieves a list of all users in the system, ordered by creation date (newest first).
+
+Request:
+  No request body required
+  Headers:
+    Authorization: Bearer <token>
+    Content-Type: application/json
+
+Response (Success - 200 OK):
+  {
+    "success": true,
+    "message": "Users retrieved successfully",
+    "data": [
+      {
+        "id": 1,
+        "email": "user@example.com",
+        "firstName": "John",
+        "lastName": "Doe",
+        "role": "Customer",
+        "isActive": true,
+        "createdAt": "2025-01-01T10:00:00Z",
+        "updatedAt": "2025-01-02T15:30:00Z",
+        "hasGoogleAuth": false,
+        "hasPassword": true
+      },
+      {
+        "id": 2,
+        "email": "admin@example.com",
+        "firstName": "Jane",
+        "lastName": "Smith",
+        "role": "Admin",
+        "isActive": true,
+        "createdAt": "2025-01-01T11:00:00Z",
+        "updatedAt": null,
+        "hasGoogleAuth": true,
+        "hasPassword": false
+      }
+    ]
+  }
+
+Response Fields:
+  - id: User ID (integer)
+  - email: User email address
+  - firstName: User's first name
+  - lastName: User's last name
+  - role: User role ("Customer", "Admin", "Seller")
+  - isActive: Whether user account is active (boolean)
+  - createdAt: Account creation timestamp (ISO 8601)
+  - updatedAt: Last update timestamp (ISO 8601, null if never updated)
+  - hasGoogleAuth: Whether user has Google authentication linked (boolean)
+  - hasPassword: Whether user has a password set (boolean)
+
+Error Response (500):
+  {
+    "success": false,
+    "message": "An error occurred while retrieving users"
+  }
+
+
+2. GET USER BY ID
+=================
+
+Endpoint:
+  GET /api/user/{id}
+
+Authentication:
+  Required (Bearer token)
+
+Description:
+  Retrieves a specific user by their ID.
+
+Request:
+  URL Parameter:
+    id: User ID (integer)
+  Headers:
+    Authorization: Bearer <token>
+    Content-Type: application/json
+
+Example:
+  GET /api/user/1
+
+Response (Success - 200 OK):
+  {
+    "success": true,
+    "message": "User retrieved successfully",
+    "data": {
+      "id": 1,
+      "email": "user@example.com",
+      "firstName": "John",
+      "lastName": "Doe",
+      "role": "Customer",
+      "isActive": true,
+      "createdAt": "2025-01-01T10:00:00Z",
+      "updatedAt": "2025-01-02T15:30:00Z",
+      "hasGoogleAuth": false,
+      "hasPassword": true
+    }
+  }
+
+Error Response (404 - Not Found):
+  {
+    "success": false,
+    "message": "User not found"
+  }
+
+Error Response (500):
+  {
+    "success": false,
+    "message": "An error occurred while retrieving user"
+  }
+
+
+3. UPDATE USER STATUS (ACTIVATE/DEACTIVATE)
+============================================
+
+Endpoint:
+  PUT /api/user/status
+
+Authentication:
+  Required (Bearer token)
+
+Description:
+  Activates or deactivates a user account. When deactivated, the user cannot log in.
+
+Request Body:
+  {
+    "userId": 1,
+    "isActive": false
+  }
+
+Request Fields:
+  - userId: User ID to update (integer, required)
+  - isActive: New status (boolean, required)
+    - true = Activate user
+    - false = Deactivate user
+
+Example Request (Deactivate User):
+  PUT /api/user/status
+  Headers:
+    Authorization: Bearer <token>
+    Content-Type: application/json
+  Body:
+    {
+      "userId": 5,
+      "isActive": false
+    }
+
+Example Request (Activate User):
+  PUT /api/user/status
+  Headers:
+    Authorization: Bearer <token>
+    Content-Type: application/json
+  Body:
+    {
+      "userId": 5,
+      "isActive": true
+    }
+
+Response (Success - 200 OK):
+  {
+    "success": true,
+    "message": "User has been deactivated successfully"
+  }
+  OR
+  {
+    "success": true,
+    "message": "User has been activated successfully"
+  }
+
+Error Response (400 - Validation Failed):
+  {
+    "success": false,
+    "message": "Validation failed",
+    "errors": [
+      "The UserId field is required.",
+      "The IsActive field is required."
+    ]
+  }
+
+Error Response (404 - User Not Found):
+  {
+    "success": false,
+    "message": "User not found"
+  }
+
+Error Response (500):
+  {
+    "success": false,
+    "message": "An error occurred while updating user status"
+  }
+
+
+FRONTEND IMPLEMENTATION EXAMPLES
+=================================
+
+Angular Service Example:
+------------------------
+
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class UserService {
+  private apiUrl = 'https://localhost:7022/api/user';
+
+  constructor(private http: HttpClient) {}
+
+  private getHeaders(): HttpHeaders {
+    const token = localStorage.getItem('token'); // or your token storage
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+  }
+
+  // Get all users
+  getUsers(): Observable<any> {
+    return this.http.get(`${this.apiUrl}`, { headers: this.getHeaders() });
+  }
+
+  // Get user by ID
+  getUserById(id: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/${id}`, { headers: this.getHeaders() });
+  }
+
+  // Update user status
+  updateUserStatus(userId: number, isActive: boolean): Observable<any> {
+    return this.http.put(
+      `${this.apiUrl}/status`,
+      { userId, isActive },
+      { headers: this.getHeaders() }
+    );
+  }
+}
+
+
+Component Example (User List with Activate/Deactivate):
+--------------------------------------------------------
+
+import { Component, OnInit } from '@angular/core';
+import { UserService } from './user.service';
+
+@Component({
+  selector: 'app-user-list',
+  template: `
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Email</th>
+          <th>Name</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of users">
+          <td>{{ user.id }}</td>
+          <td>{{ user.email }}</td>
+          <td>{{ user.firstName }} {{ user.lastName }}</td>
+          <td>{{ user.role }}</td>
+          <td>
+            <span [class.active]="user.isActive" [class.inactive]="!user.isActive">
+              {{ user.isActive ? 'Active' : 'Inactive' }}
+            </span>
+          </td>
+          <td>
+            <button 
+              *ngIf="user.isActive"
+              (click)="deactivateUser(user.id)"
+              class="btn btn-danger">
+              Deactivate
+            </button>
+            <button 
+              *ngIf="!user.isActive"
+              (click)="activateUser(user.id)"
+              class="btn btn-success">
+              Activate
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  `
+})
+export class UserListComponent implements OnInit {
+  users: any[] = [];
+
+  constructor(private userService: UserService) {}
+
+  ngOnInit() {
+    this.loadUsers();
+  }
+
+  loadUsers() {
+    this.userService.getUsers().subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.users = response.data;
+        }
+      },
+      error: (error) => {
+        console.error('Error loading users:', error);
+      }
+    });
+  }
+
+  activateUser(userId: number) {
+    this.userService.updateUserStatus(userId, true).subscribe({
+      next: (response) => {
+        if (response.success) {
+          alert('User activated successfully');
+          this.loadUsers(); // Refresh list
+        }
+      },
+      error: (error) => {
+        console.error('Error activating user:', error);
+        alert('Failed to activate user');
+      }
+    });
+  }
+
+  deactivateUser(userId: number) {
+    if (confirm('Are you sure you want to deactivate this user? They will not be able to log in.')) {
+      this.userService.updateUserStatus(userId, false).subscribe({
+        next: (response) => {
+          if (response.success) {
+            alert('User deactivated successfully');
+            this.loadUsers(); // Refresh list
+          }
+        },
+        error: (error) => {
+          console.error('Error deactivating user:', error);
+          alert('Failed to deactivate user');
+        }
+      });
+    }
+  }
+}
+
+
+IMPORTANT NOTES FOR FRONTEND
+=============================
+
+1. Authentication:
+   - All endpoints require JWT token
+   - Token should be stored securely (localStorage, sessionStorage, or httpOnly cookie)
+   - Include token in Authorization header: "Bearer <token>"
+
+2. Error Handling:
+   - Always check response.success before using response.data
+   - Handle 401 (Unauthorized) - redirect to login
+   - Handle 404 (Not Found) - show appropriate message
+   - Handle 500 (Server Error) - show error message to user
+
+3. User Status:
+   - isActive = true: User can log in
+   - isActive = false: User CANNOT log in (blocked)
+   - When deactivating, show confirmation dialog
+   - Refresh user list after status update
+
+4. UI Recommendations:
+   - Show visual indicator for active/inactive status (green/red badge)
+   - Disable "Deactivate" button for currently logged-in user (prevent self-deactivation)
+   - Show loading state while fetching users
+   - Implement pagination if user list is large (future enhancement)
+
+5. Security:
+   - Only authorized users (typically Admin role) should access these endpoints
+   - Consider adding role-based guards in Angular
+   - Never expose sensitive user data in console logs
+
+6. Testing:
+   - Test with valid token
+   - Test with expired/invalid token (should get 401)
+   - Test deactivating a user, then try to log in as that user (should fail)
+   - Test activating a deactivated user, then log in (should succeed)
+
+
+API SUMMARY
+===========
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | /api/user | Yes | Get all users |
+| GET | /api/user/{id} | Yes | Get user by ID |
+| PUT | /api/user/status | Yes | Activate/Deactivate user |
+
+All endpoints return ApiResponseDto<T> format:
+  {
+    "success": boolean,
+    "message": string,
+    "data": T,
+    "errors": string[] (only on validation errors)
+  }
+

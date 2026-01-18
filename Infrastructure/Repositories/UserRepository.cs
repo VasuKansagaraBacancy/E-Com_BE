@@ -26,6 +26,19 @@ namespace E_Commerce.Infrastructure.Repositories
                 .FirstOrDefaultAsync(u => u.GoogleId == googleId);
         }
 
+        public async Task<User?> GetByIdAsync(int id)
+        {
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == id);
+        }
+
+        public async Task<IEnumerable<User>> GetAllAsync()
+        {
+            return await _context.Users
+                .OrderByDescending(u => u.CreatedAt)
+                .ToListAsync();
+        }
+
         public async Task<User> CreateAsync(User user)
         {
             _context.Users.Add(user);
