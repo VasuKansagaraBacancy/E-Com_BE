@@ -390,7 +390,7 @@ Response (Success - 200 OK):
 
 Notes:
   - Seller can only delete their own products
-  - This is a soft delete (sets IsActive to false)
+  - This is a HARD delete (product row is removed from the database)
 
 
 9. APPROVE/REJECT PRODUCT (ADMIN ONLY)

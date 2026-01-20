@@ -86,9 +86,8 @@ namespace E_Commerce.Infrastructure.Repositories
                 return false;
             }
 
-            // Soft delete - set IsActive to false
-            product.IsActive = false;
-            product.UpdatedAt = DateTime.UtcNow;
+            // Hard delete - remove from DB
+            _context.Products.Remove(product);
             await _context.SaveChangesAsync();
             return true;
         }
