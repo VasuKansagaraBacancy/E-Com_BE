@@ -14,6 +14,9 @@ namespace E_Commerce.Infrastructure.Data
         public DbSet<PasswordResetOtp> PasswordResetOtps { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<ProductCategory> ProductCategories { get; set; }
+        public DbSet<Cart> Carts { get; set; }
+        public DbSet<Order> Orders { get; set; }
+        public DbSet<OrderItem> OrderItems { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -78,6 +81,61 @@ namespace E_Commerce.Infrastructure.Data
                 entity.HasOne(e => e.ApprovedBy)
                       .WithMany()
                       .HasForeignKey(e => e.ApprovedByUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Cart configuration
+            modelBuilder.Entity<Cart>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.UserId, e.ProductId }).IsUnique();
+                
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                
+                entity.HasOne(e => e.Product)
+                      .WithMany()
+                      .HasForeignKey(e => e.ProductId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Order configuration
+            modelBuilder.Entity<Order>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.TotalAmount).IsRequired().HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ShippingAddress).HasMaxLength(200);
+                entity.Property(e => e.ShippingCity).HasMaxLength(100);
+                entity.Property(e => e.ShippingState).HasMaxLength(50);
+                entity.Property(e => e.ShippingZipCode).HasMaxLength(20);
+                entity.Property(e => e.ShippingCountry).HasMaxLength(100);
+                entity.Property(e => e.Notes).HasMaxLength(500);
+                
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // OrderItem configuration
+            modelBuilder.Entity<OrderItem>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ProductName).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Price).IsRequired().HasColumnType("decimal(18,2)");
+                entity.Property(e => e.SubTotal).IsRequired().HasColumnType("decimal(18,2)");
+                
+                entity.HasOne(e => e.Order)
+                      .WithMany(o => o.OrderItems)
+                      .HasForeignKey(e => e.OrderId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                
+                entity.HasOne(e => e.Product)
+                      .WithMany()
+                      .HasForeignKey(e => e.ProductId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
         }

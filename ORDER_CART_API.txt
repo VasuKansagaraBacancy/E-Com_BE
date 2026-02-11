@@ -1,0 +1,248 @@
+ORDER & CART API DOCUMENTATION
+==============================
+
+BASE URL: https://localhost:7022/api
+
+AUTH:
+- All cart and order endpoints require JWT authentication.
+- Use header: Authorization: Bearer <your-jwt-token>
+
+ROLES:
+- Customer: can manage their own cart and orders.
+- Admin: can view all orders and update order status.
+
+
+CART API
+========
+
+1) Get current user's cart
+--------------------------
+GET /api/cart
+
+Response:
+{
+  "success": true,
+  "message": "Cart retrieved successfully",
+  "data": [
+    {
+      "id": 1,
+      "productId": 10,
+      "productName": "Laptop",
+      "productPrice": 999.99,
+      "productImageUrl": "https://...",
+      "quantity": 2,
+      "subTotal": 1999.98,
+      "createdAt": "2025-01-01T10:00:00Z"
+    }
+  ]
+}
+
+
+2) Add item to cart
+-------------------
+POST /api/cart
+
+Body:
+{
+  "productId": 10,
+  "quantity": 2
+}
+
+Rules:
+- Product must exist.
+- Product must be Approved and active.
+- Stock must be >= requested quantity.
+- If item already in cart, quantity is increased.
+
+
+3) Update cart item quantity
+----------------------------
+PUT /api/cart/{id}
+
+Body:
+{
+  "quantity": 3
+}
+
+Rules:
+- User can only update their own cart items.
+- Stock must be >= new quantity.
+
+
+4) Remove item from cart
+------------------------
+DELETE /api/cart/{id}
+
+Rules:
+- User can only remove their own cart items.
+
+
+5) Clear cart
+-------------
+DELETE /api/cart/clear
+
+Description:
+- Removes all items from current user's cart.
+
+
+ORDER API
+=========
+
+Order status values:
+- Pending
+- Processing
+- Shipped
+- Delivered
+- Cancelled
+
+
+1) Get current user's orders
+----------------------------
+GET /api/order
+
+Response:
+{
+  "success": true,
+  "message": "Orders retrieved successfully",
+  "data": [
+    {
+      "id": 1,
+      "userId": 5,
+      "userEmail": "user@example.com",
+      "userName": "John Doe",
+      "status": "Pending",
+      "totalAmount": 1999.98,
+      "shippingAddress": "123 Street",
+      "shippingCity": "City",
+      "shippingState": "State",
+      "shippingZipCode": "12345",
+      "shippingCountry": "Country",
+      "notes": "Leave at door",
+      "createdAt": "2025-01-01T10:00:00Z",
+      "updatedAt": null,
+      "orderItems": [
+        {
+          "id": 1,
+          "productId": 10,
+          "productName": "Laptop",
+          "price": 999.99,
+          "quantity": 2,
+          "subTotal": 1999.98
+        }
+      ]
+    }
+  ]
+}
+
+
+2) Get all orders (Admin only)
+------------------------------
+GET /api/order/admin
+
+Auth:
+- Admin role required.
+
+Description:
+- Returns all orders in the system.
+
+
+3) Get order by ID
+------------------
+GET /api/order/{id}
+
+Rules:
+- Customer can only see their own orders.
+- Admin can see any order.
+
+Response:
+- Same shape as single order in #1.
+
+
+4) Create order from cart
+-------------------------
+POST /api/order
+
+Body (shipping info is optional):
+{
+  "shippingAddress": "123 Street",
+  "shippingCity": "City",
+  "shippingState": "State",
+  "shippingZipCode": "12345",
+  "shippingCountry": "Country",
+  "notes": "Leave at door"
+}
+
+Flow:
+- Reads all items from current user's cart.
+- Validates each product:
+  - Exists
+  - Approved
+  - Active
+  - Sufficient stock
+- Calculates totalAmount = sum(price * quantity).
+- Creates Order + OrderItems.
+- Decreases product stock by ordered quantity.
+- Clears user's cart.
+
+Errors:
+- 400 if cart is empty.
+- 400 if product is unavailable / not approved / not enough stock.
+
+
+5) Update order status (Admin only)
+-----------------------------------
+PUT /api/order/status
+
+Body:
+{
+  "orderId": 1,
+  "status": "Shipped"
+}
+
+Valid statuses:
+- "Pending", "Processing", "Shipped", "Delivered", "Cancelled"
+
+Rules:
+- Only Admin can call this.
+- Cannot change status of:
+  - Cancelled orders (stays Cancelled)
+  - Delivered orders (stays Delivered)
+
+Response (success):
+{
+  "success": true,
+  "message": "Order status updated successfully"
+}
+
+
+FRONTEND FLOW SUMMARY
+=====================
+
+1) Add to cart:
+   - User clicks "Add to cart" on product detail/list.
+   - Frontend calls POST /api/cart with { productId, quantity }.
+
+2) View cart:
+   - Call GET /api/cart.
+   - Show product name, price, quantity, subtotal, cart total.
+
+3) Update/remove cart items:
+   - Update quantity: PUT /api/cart/{id}.
+   - Remove: DELETE /api/cart/{id}.
+   - Clear: DELETE /api/cart/clear.
+
+4) Place order:
+   - On checkout, collect shipping info.
+   - Call POST /api/order with shipping details.
+   - On success, clear cart UI and navigate to order list or order detail page.
+
+5) View orders:
+   - User: GET /api/order.
+   - Admin: GET /api/order/admin.
+   - Order detail: GET /api/order/{id}.
+
+6) Admin change order status:
+   - Admin dashboard: list orders with current status.
+   - Admin chooses new status and calls PUT /api/order/status.
+
+
