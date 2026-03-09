@@ -81,6 +81,7 @@ namespace E_Commerce.Core.Services
                 ImageUrl = createDto.ImageUrl,
                 CategoryId = createDto.CategoryId,
                 CreatedByUserId = createdByUserId,
+                ReturnPolicyDays = createDto.ReturnPolicyDays,
                 Status = status,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
@@ -131,6 +132,7 @@ namespace E_Commerce.Core.Services
             product.StockQuantity = updateDto.StockQuantity;
             product.ImageUrl = updateDto.ImageUrl;
             product.CategoryId = updateDto.CategoryId;
+            product.ReturnPolicyDays = updateDto.ReturnPolicyDays;
             product.UpdatedAt = DateTime.UtcNow;
 
             product = await _productRepository.UpdateAsync(product);
@@ -197,6 +199,7 @@ namespace E_Commerce.Core.Services
                 Description = product.Description,
                 Price = product.Price,
                 StockQuantity = product.StockQuantity,
+                ReturnPolicyDays = product.ReturnPolicyDays,
                 ImageUrl = product.ImageUrl,
                 CategoryId = product.CategoryId,
                 CategoryName = product.Category?.Name ?? "",

@@ -40,6 +40,8 @@ namespace E_Commerce.Core.Entities
 
         public DateTime? UpdatedAt { get; set; }
 
+        public DateTime? DeliveredAt { get; set; }
+
         // Navigation properties
         [ForeignKey("UserId")]
         public virtual User User { get; set; } = null!;

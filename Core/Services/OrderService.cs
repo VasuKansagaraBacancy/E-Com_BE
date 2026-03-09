@@ -176,6 +176,12 @@ namespace E_Commerce.Core.Services
                 }
             }
 
+            // If changing to Delivered for the first time, set DeliveredAt timestamp
+            if (status == "Delivered" && order.Status != "Delivered")
+            {
+                order.DeliveredAt = DateTime.UtcNow;
+            }
+
             order.Status = status;
             order.UpdatedAt = DateTime.UtcNow;
             await _orderRepository.UpdateAsync(order);
@@ -183,6 +189,137 @@ namespace E_Commerce.Core.Services
             _logger.LogInformation("Order status updated: OrderId={OrderId}, NewStatus={Status}, AdminUserId={AdminUserId}", 
                 orderId, status, adminUserId);
 
+            return true;
+        }
+
+        public async Task<bool> RequestReturnAsync(int orderItemId, int userId, string? reason)
+        {
+            var orderItem = await _orderRepository.GetOrderItemByIdAsync(orderItemId);
+            if (orderItem == null)
+            {
+                return false;
+            }
+
+            if (orderItem.Order?.UserId != userId)
+            {
+                throw new ValidationException("You can only request returns for your own orders.");
+            }
+
+            if (orderItem.Order?.Status != "Delivered")
+            {
+                throw new ValidationException("Return can only be requested for delivered orders.");
+            }
+
+            if (orderItem.Order?.DeliveredAt == null)
+            {
+                throw new ValidationException("Order delivery date is not set. Cannot request return.");
+            }
+
+            var product = orderItem.Product;
+            if (product == null || product.ReturnPolicyDays <= 0)
+            {
+                throw new ValidationException("This product does not allow returns.");
+            }
+
+            var returnByDate = orderItem.Order.DeliveredAt.Value.AddDays(product.ReturnPolicyDays);
+            if (DateTime.UtcNow > returnByDate)
+            {
+                throw new ValidationException($"Return window has expired. Returns were allowed until {returnByDate:yyyy-MM-dd}.");
+            }
+
+            if (orderItem.ReturnStatus != "None")
+            {
+                throw new ValidationException($"Return already {orderItem.ReturnStatus.ToLower()} for this item.");
+            }
+
+            orderItem.ReturnStatus = "Requested";
+            orderItem.ReturnRequestedAt = DateTime.UtcNow;
+            orderItem.ReturnReason = reason;
+            await _orderRepository.UpdateOrderItemAsync(orderItem);
+
+            _logger.LogInformation("Return requested: OrderItemId={OrderItemId}, UserId={UserId}", orderItemId, userId);
+            return true;
+        }
+
+        public async Task<bool> ResolveReturnAsync(int orderItemId, bool approved, int resolvedByUserId, string userRole, string? note)
+        {
+            if (userRole != "Admin" && userRole != "Seller")
+            {
+                throw new ValidationException("Only Admin or Seller can approve or reject returns.");
+            }
+
+            var orderItem = await _orderRepository.GetOrderItemByIdAsync(orderItemId);
+            if (orderItem == null)
+            {
+                return false;
+            }
+
+            if (orderItem.ReturnStatus != "Requested")
+            {
+                throw new ValidationException("Only items with a pending return request can be resolved.");
+            }
+
+            if (userRole == "Seller")
+            {
+                var product = await _productRepository.GetByIdAsync(orderItem.ProductId);
+                if (product == null || product.CreatedByUserId != resolvedByUserId)
+                {
+                    throw new ValidationException("You can only resolve returns for your own products.");
+                }
+            }
+
+            orderItem.ReturnStatus = approved ? "Approved" : "Rejected";
+            orderItem.ReturnResolvedAt = DateTime.UtcNow;
+            if (approved)
+            {
+                orderItem.RefundStatus = "Initiated"; // Customer can see; Admin can update to Done or Refunded later.
+            }
+            if (!string.IsNullOrWhiteSpace(note))
+            {
+                orderItem.ReturnReason = (orderItem.ReturnReason ?? "") + " [Resolution: " + note + "]";
+            }
+
+            if (approved)
+            {
+                var product = await _productRepository.GetByIdAsync(orderItem.ProductId);
+                if (product != null)
+                {
+                    product.StockQuantity += orderItem.Quantity;
+                    await _productRepository.UpdateAsync(product);
+                }
+            }
+
+            await _orderRepository.UpdateOrderItemAsync(orderItem);
+
+            _logger.LogInformation("Return {Action}: OrderItemId={OrderItemId}, ResolvedBy={UserId}", 
+                approved ? "approved" : "rejected", orderItemId, resolvedByUserId);
+            return true;
+        }
+
+        public async Task<bool> UpdateRefundStatusAsync(int orderItemId, string refundStatus, int adminUserId)
+        {
+            var validStatuses = new[] { "None", "Initiated", "Done", "Refunded" };
+            if (!validStatuses.Contains(refundStatus))
+            {
+                throw new ValidationException($"Invalid refund status. Valid values: {string.Join(", ", validStatuses)}");
+            }
+
+            var orderItem = await _orderRepository.GetOrderItemByIdAsync(orderItemId);
+            if (orderItem == null)
+            {
+                return false;
+            }
+
+            if (orderItem.ReturnStatus != "Approved")
+            {
+                throw new ValidationException("Refund status can only be updated when the return is approved.");
+            }
+
+            orderItem.RefundStatus = refundStatus;
+            await _orderRepository.UpdateOrderItemAsync(orderItem);
+
+            _logger.LogInformation("Refund status updated: OrderItemId={OrderItemId}, RefundStatus={RefundStatus}, AdminUserId={AdminUserId}",
+                orderItemId, refundStatus, adminUserId);
             return true;
         }
 
@@ -204,6 +341,7 @@ namespace E_Commerce.Core.Services
                 Notes = order.Notes,
                 CreatedAt = order.CreatedAt,
                 UpdatedAt = order.UpdatedAt,
+                DeliveredAt = order.DeliveredAt,
                 OrderItems = order.OrderItems.Select(oi => new OrderItemDto
                 {
                     Id = oi.Id,
@@ -211,7 +349,12 @@ namespace E_Commerce.Core.Services
                     ProductName = oi.ProductName,
                     Price = oi.Price,
                     Quantity = oi.Quantity,
-                    SubTotal = oi.SubTotal
+                    SubTotal = oi.SubTotal,
+                    ReturnStatus = oi.ReturnStatus,
+                    ReturnRequestedAt = oi.ReturnRequestedAt,
+                    ReturnResolvedAt = oi.ReturnResolvedAt,
+                    ReturnReason = oi.ReturnReason,
+                    RefundStatus = oi.RefundStatus
                 }).ToList()
             };
         }

@@ -21,6 +21,12 @@ namespace E_Commerce.Core.Entities
         [Required]
         public int StockQuantity { get; set; }
 
+        /// <summary>
+        /// Number of days after delivery during which this product can be returned. 0 = no returns allowed.
+        /// </summary>
+        [Range(0, 365)]
+        public int ReturnPolicyDays { get; set; } = 0;
+
         [MaxLength(500)]
         public string? ImageUrl { get; set; }
 

@@ -28,6 +28,22 @@ namespace E_Commerce.Core.Entities
         [Column(TypeName = "decimal(18,2)")]
         public decimal SubTotal { get; set; } // Price * Quantity
 
+        [MaxLength(50)]
+        public string ReturnStatus { get; set; } = "None"; // None, Requested, Approved, Rejected
+
+        public DateTime? ReturnRequestedAt { get; set; }
+
+        public DateTime? ReturnResolvedAt { get; set; }
+
+        [MaxLength(500)]
+        public string? ReturnReason { get; set; }
+
+        /// <summary>
+        /// Refund status when return is approved: None, Initiated, Done, Refunded. Updated by Admin; customer can view.
+        /// </summary>
+        [MaxLength(50)]
+        public string RefundStatus { get; set; } = "None";
+
         // Navigation properties
         [ForeignKey("OrderId")]
         public virtual Order Order { get; set; } = null!;

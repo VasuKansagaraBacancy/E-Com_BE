@@ -16,6 +16,7 @@ namespace E_Commerce.Core.DTOs
         public string? Notes { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public DateTime? DeliveredAt { get; set; }
         public List<OrderItemDto> OrderItems { get; set; } = new List<OrderItemDto>();
     }
 }

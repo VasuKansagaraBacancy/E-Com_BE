@@ -9,6 +9,9 @@ namespace E_Commerce.Core.Interfaces
         Task<OrderDto?> GetOrderByIdAsync(int orderId, int userId, string userRole);
         Task<OrderDto> CreateOrderFromCartAsync(CreateOrderDto createOrderDto, int userId);
         Task<bool> UpdateOrderStatusAsync(int orderId, string status, int adminUserId);
+        Task<bool> RequestReturnAsync(int orderItemId, int userId, string? reason);
+        Task<bool> ResolveReturnAsync(int orderItemId, bool approved, int resolvedByUserId, string userRole, string? note);
+        Task<bool> UpdateRefundStatusAsync(int orderItemId, string refundStatus, int adminUserId);
     }
 }
 

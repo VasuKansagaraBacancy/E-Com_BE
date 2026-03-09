@@ -67,6 +67,7 @@ namespace E_Commerce.Infrastructure.Data
                 entity.Property(e => e.Price).IsRequired().HasColumnType("decimal(18,2)");
                 entity.Property(e => e.ImageUrl).HasMaxLength(500);
                 entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.ReturnPolicyDays).IsRequired();
                 
                 entity.HasOne(e => e.Category)
                       .WithMany(c => c.Products)

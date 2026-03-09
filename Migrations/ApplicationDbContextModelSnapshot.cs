@@ -66,6 +66,9 @@ namespace E_Commerce.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -135,6 +138,26 @@ namespace E_Commerce.Migrations
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
+
+                    b.Property<string>("RefundStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ReturnReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ReturnRequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ReturnResolvedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReturnStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<decimal>("SubTotal")
                         .HasColumnType("decimal(18,2)");
@@ -223,6 +246,9 @@ namespace E_Commerce.Migrations
 
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ReturnPolicyDays")
+                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .IsRequired()

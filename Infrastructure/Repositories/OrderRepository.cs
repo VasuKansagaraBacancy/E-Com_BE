@@ -23,6 +23,14 @@ namespace E_Commerce.Infrastructure.Repositories
                 .FirstOrDefaultAsync(o => o.Id == id);
         }
 
+        public async Task<OrderItem?> GetOrderItemByIdAsync(int orderItemId)
+        {
+            return await _context.OrderItems
+                .Include(oi => oi.Order)
+                .Include(oi => oi.Product)
+                .FirstOrDefaultAsync(oi => oi.Id == orderItemId);
+        }
+
         public async Task<IEnumerable<Order>> GetAllAsync()
         {
             return await _context.Orders
@@ -56,6 +64,12 @@ namespace E_Commerce.Infrastructure.Repositories
             _context.Orders.Update(order);
             await _context.SaveChangesAsync();
             return order;
+        }
+
+        public async Task UpdateOrderItemAsync(OrderItem orderItem)
+        {
+            _context.OrderItems.Update(orderItem);
+            await _context.SaveChangesAsync();
         }
 
         public async Task<bool> ExistsAsync(int id)

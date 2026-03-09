@@ -240,6 +240,184 @@ namespace E_Commerce.Controllers
                 });
             }
         }
+
+        /// <summary>
+        /// Request return for an order item (Customer). Item must be within product's return policy window.
+        /// </summary>
+        [HttpPost("return")]
+        public async Task<ActionResult<ApiResponseDto<object>>> RequestReturn([FromBody] RequestReturnDto requestReturnDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new ApiResponseDto<object>
+                    {
+                        Success = false,
+                        Message = "Validation failed",
+                        Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
+                    });
+                }
+
+                var userId = GetUserId();
+                var result = await _orderService.RequestReturnAsync(
+                    requestReturnDto.OrderItemId,
+                    userId,
+                    requestReturnDto.Reason);
+
+                if (!result)
+                {
+                    return NotFound(new ApiResponseDto<object>
+                    {
+                        Success = false,
+                        Message = "Order item not found"
+                    });
+                }
+
+                return Ok(new ApiResponseDto<object>
+                {
+                    Success = true,
+                    Message = "Return requested successfully. Waiting for seller or admin approval."
+                });
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(new ApiResponseDto<object>
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error requesting return for OrderItemId={OrderItemId}", requestReturnDto.OrderItemId);
+                return StatusCode(500, new ApiResponseDto<object>
+                {
+                    Success = false,
+                    Message = "An error occurred while requesting return"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Approve or reject a return request (Admin or Seller only).
+        /// </summary>
+        [HttpPost("return/resolve")]
+        [Authorize(Roles = "Admin,Seller")]
+        public async Task<ActionResult<ApiResponseDto<object>>> ResolveReturn([FromBody] ResolveReturnDto resolveReturnDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new ApiResponseDto<object>
+                    {
+                        Success = false,
+                        Message = "Validation failed",
+                        Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
+                    });
+                }
+
+                var userId = GetUserId();
+                var userRole = GetUserRole();
+                var result = await _orderService.ResolveReturnAsync(
+                    resolveReturnDto.OrderItemId,
+                    resolveReturnDto.Approved,
+                    userId,
+                    userRole,
+                    resolveReturnDto.Note);
+
+                if (!result)
+                {
+                    return NotFound(new ApiResponseDto<object>
+                    {
+                        Success = false,
+                        Message = "Order item not found"
+                    });
+                }
+
+                return Ok(new ApiResponseDto<object>
+                {
+                    Success = true,
+                    Message = resolveReturnDto.Approved
+                        ? "Return approved. Product stock has been restored."
+                        : "Return rejected."
+                });
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(new ApiResponseDto<object>
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resolving return for OrderItemId={OrderItemId}", resolveReturnDto.OrderItemId);
+                return StatusCode(500, new ApiResponseDto<object>
+                {
+                    Success = false,
+                    Message = "An error occurred while resolving return"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Update refund status for an order item (Admin only). Only allowed when return is Approved. Values: None, Initiated, Done, Refunded.
+        /// </summary>
+        [HttpPut("return/refund-status")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<ApiResponseDto<object>>> UpdateRefundStatus([FromBody] UpdateRefundStatusDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new ApiResponseDto<object>
+                    {
+                        Success = false,
+                        Message = "Validation failed",
+                        Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
+                    });
+                }
+
+                var adminUserId = GetUserId();
+                var result = await _orderService.UpdateRefundStatusAsync(dto.OrderItemId, dto.RefundStatus, adminUserId);
+
+                if (!result)
+                {
+                    return NotFound(new ApiResponseDto<object>
+                    {
+                        Success = false,
+                        Message = "Order item not found"
+                    });
+                }
+
+                return Ok(new ApiResponseDto<object>
+                {
+                    Success = true,
+                    Message = "Refund status updated successfully"
+                });
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(new ApiResponseDto<object>
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating refund status for OrderItemId={OrderItemId}", dto.OrderItemId);
+                return StatusCode(500, new ApiResponseDto<object>
+                {
+                    Success = false,
+                    Message = "An error occurred while updating refund status"
+                });
+            }
+        }
     }
 }
 

@@ -24,6 +24,9 @@ namespace E_Commerce.Core.DTOs
 
         [Required]
         public int CategoryId { get; set; }
+
+        [Range(0, 365, ErrorMessage = "Return policy days must be between 0 and 365")]
+        public int ReturnPolicyDays { get; set; } = 0;
     }
 }
 
