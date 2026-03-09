@@ -1,3 +1,84 @@
+# E-Commerce API (ASP.NET Core + EF Core)
+
+Backend API for an E-Commerce system (Auth, Users, Products/Categories, Cart, Orders, Returns + Refund status).
+
+## Tech stack
+
+- **.NET**: `net8.0`
+- **Database**: SQL Server (EF Core 8)
+- **Auth**: JWT + Google ID token login
+- **Docs**: Swagger (`/swagger` in Development)
+
+## Prerequisites
+
+- .NET SDK 8+
+- SQL Server (LocalDB / SQLExpress / full SQL Server)
+
+## Configure
+
+Update `appsettings.json` (or `appsettings.Development.json`):
+
+- **Connection string**
+  - `ConnectionStrings:DefaultConnection`
+- **JWT**
+  - `JwtSettings:SecretKey` (use a strong value, 32+ chars)
+  - `JwtSettings:Issuer`, `JwtSettings:Audience`, `JwtSettings:ExpiryMinutes`
+- **Google login**
+  - `GoogleOAuth:ClientId`
+- **Email (optional)**
+  - `EmailSettings:*`
+  - If SMTP user/pass are missing, the app will log OTP instead of sending email.
+
+> Security note: don’t commit real secrets in `appsettings.json`. Use User Secrets or environment variables in real deployments.
+
+## Database setup (EF Core)
+
+From the project folder:
+
+```bash
+dotnet tool restore
+dotnet ef database update
+```
+
+## Run
+
+```bash
+dotnet run
+```
+
+Swagger UI (Development): `https://localhost:<port>/swagger`
+
+## Roles & permissions (high level)
+
+- **Customer**
+  - View own orders, manage cart, request return within return window
+- **Seller**
+  - Manage own products (approval required for listing), resolve returns for own products
+- **Admin**
+  - Manage categories, approve products, manage all orders, update order status, update refund status, manage users
+
+## Returns & refund status
+
+Per order item fields (exposed on order APIs):
+
+- **ReturnStatus**: `None | Requested | Approved | Rejected`
+- **RefundStatus**: `None | Initiated | Done | Refunded`
+
+Flow:
+
+1. Customer requests return for an order item (must be delivered and within product return policy window).
+2. Seller/Admin resolves (approve/reject).
+3. When approved, backend sets `RefundStatus = Initiated`.
+4. Admin can update `RefundStatus` (including **Refunded** so customer can clearly see “return refunded”).
+
+## Common commands
+
+```bash
+dotnet build -c Release
+dotnet ef migrations add <Name>
+dotnet ef database update
+```
+
 # E-Commerce Authentication & Authorization Module
 
 A complete authentication and authorization system built with **ASP.NET Core 8**, following Clean Architecture principles.
