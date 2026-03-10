@@ -25,7 +25,7 @@ namespace E_Commerce.Infrastructure.Services
                 var smtpPort = int.Parse(_configuration["EmailSettings:SmtpPort"] ?? "587");
                 var smtpUsername = _configuration["EmailSettings:SmtpUsername"];
                 var smtpPassword = _configuration["EmailSettings:SmtpPassword"];
-                var fromEmail = _configuration["EmailSettings:FromEmail"] ?? smtpUsername;
+                var fromEmail = _configuration["EmailSettings:FromEmail"] ?? smtpUsername ?? "no-reply@localhost";
                 var fromName = _configuration["EmailSettings:FromName"] ?? "E-Commerce App";
 
                 var subject = "Password Reset OTP";
